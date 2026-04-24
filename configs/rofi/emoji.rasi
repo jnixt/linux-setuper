@@ -1,0 +1,80 @@
+configuration {
+  modi: "emoji:~/.config/rofi/scripts/emoji.sh";
+  show-icons: true;
+  cycle: true;
+  font: "JetBrainsMono Nerd Font 13";
+
+  display-emoji: " ";
+}
+
+@theme "colors.rasi"
+
+window {
+  width: 35%;
+  border-radius: 15px;
+  background-color: transparent;
+}
+
+mainbox {
+  enabled: true;
+  background-color: @bg;
+  children: [inputbar, listview];
+  padding: 20px;
+}
+
+inputbar {
+  children: [prompt, entry];
+  background-color: @bg;
+  border-radius: 10px;
+  margin: 0px 0px 8px 0px;
+  padding: 7px 12px;
+}
+
+prompt {
+  background-color: transparent;
+  text-color: @mauve;
+  margin: 0px 4px 0px 0px;
+}
+
+entry {
+  background-color: transparent;
+  placeholder: "Search..";
+  placeholder-color: @surface1;
+  cursor-color: @fg;
+  text-color: @fg;
+}
+
+listview {
+  background-color: transparent;
+  lines: 8;
+  columns: 1;
+}
+
+
+element {
+  cursor: pointer;
+  padding: 8px;
+  spacing: 7px;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+element-text { 
+  background-color: transparent;
+  text-color: @fg;
+}
+
+element selected {
+  background-color: @lavender; 
+}
+
+element-text selected {
+  text-color: @mantle;
+}
+
+element-icon {
+  background-color: transparent;
+  size: 25px;
+  cursor: pointer;
+}
+

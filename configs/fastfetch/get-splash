@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+# ==============================================================================
+#  get-splash
+#  Returns a splash/quote message for fastfetch.
+#  Uses `hyprctl splash` when running under Hyprland; otherwise picks a random
+#  message from a built-in curated list.
+#
+#  Usage (in fastfetch config.jsonc):
+#    "text": "get-splash"
+# ==============================================================================
+
+if command -v hyprctl >/dev/null 2>&1 && pgrep -x "Hyprland" >/dev/null 2>&1; then
+    msg=$(hyprctl splash 2>/dev/null)
+    if [[ -n "$msg" ]]; then
+        echo "$msg"
+        exit 0
+    fi
+fi
+
+# --- Fallback quote list ---
+quotes=(
+    "There's no place like ~"
+    "Keep it simple, keep it fast."
+    "Rice never stops."
+    "It's not a bug, it's an undocumented feature."
+    "btw, I use Arch."
+    "The best distro is the one you configured yourself."
+    "Uptime is a lifestyle."
+    "Have you tried turning it off and on again?"
+    "Dotfiles are love letters to your future self."
+    "Every config change is a chance to break everything."
+    "My window manager has window managers."
+    "Bloat is in the eye of the beholder."
+    "I void warranties."
+    "Wayland when?"
+    "touch grass && reboot"
+    "grep -r happiness /"
+    "alias life='sudo life --fix-everything'"
+    "This machine runs on caffeine and config files."
+    "chmod +x everything"
+    "You are root. With great power comes no safety net."
+    "Your terminal is beautiful today."
+    "A tiling WM a day keeps the mouse away."
+    "rm -rf bad_days"
+    "The cursor is mightier than the mouse."
+    "I use neovim, by the way."
+    "systemd didn't start this argument."
+    "Fonts: the eternal struggle."
+    "One more keybind and it'll be perfect."
+    "Fetch responsibly."
+    "In this house we respect the Unix philosophy."
+)
+
+echo "${quotes[RANDOM % ${#quotes[@]}]}"

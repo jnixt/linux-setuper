@@ -1,0 +1,9 @@
+{
+    "autosu": true,
+    "colorscheme": "catppuccin-macchiato",
+    "softwrap": true,
+    "statusformatl": "  $(filename) -\u003e ($(line), $(col))",
+    "statusformatr": "  :)   ",
+    "tabsize": 2,
+    "wordwrap": true
+}

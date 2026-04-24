@@ -1,0 +1,68 @@
+configuration {
+  modi: "selector:~/.config/rofi/scripts/selector.sh";
+  show-icons: false;
+  cycle: true;
+  steal-focus: true;
+  click-to-exit: true;
+
+  display-selector: " ";
+  display-combi: "󰽜 ";
+  font: "JetBrainsMono NFP 100";
+
+  kb-cancel: "Escape,Control+g,Control+bracketleft"; 
+  me-select-entry: "MousePrimary";
+  me-accept-entry: "!MousePrimary";
+  
+  hover-select: true;
+}
+
+@theme "colors.rasi"
+
+window {
+  width: 600px;
+  border-radius: 25px;
+  background-color: transparent;
+}
+
+mainbox {
+  enabled: true;
+  background-color: @bg;
+  padding: 20px;
+}
+
+inputbar {
+  enabled: false;
+}
+
+listview {
+  background-color: transparent;
+  lines: 3;
+  columns: 3;
+}
+
+
+element {
+  cursor: pointer;
+  padding: 10px 1px;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+element-text {
+  cursor: pointer;
+  margin: 0px;
+  horizontal-align: 0.5;
+  vertical-align: 0.5;
+  background-color: transparent;
+  text-color: @overlay0;
+}
+
+element selected {
+  background-color: @glass; 
+}
+
+element-text selected {
+  text-color: @fg;
+}
+
+

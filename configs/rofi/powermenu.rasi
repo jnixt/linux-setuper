@@ -1,0 +1,64 @@
+configuration {
+  modi: "powermenu";
+  show-icons: false;
+  cycle: true;
+  font: "JetBrainsMono NFP 100";
+
+  display-powermenu: "󰐥 ";
+}
+
+@theme "colors.rasi"
+
+window {
+  width: 950px;
+  border-radius: 15px;
+  background-color: transparent;
+}
+
+mainbox {
+  enabled: true;
+  background-color: @bg;
+  children: [inputbar, listview];
+  padding: 20px;
+}
+
+inputbar {
+  enabled: false;
+}
+
+listview {
+  background-color: transparent;
+  lines: 1;
+  columns: 5;
+  spacing: 10px;
+}
+
+
+element {
+  cursor: pointer;
+  spacing: 7px;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+element-text {
+  cursor: pointer;
+  horizontal-align: 0.5;
+  vertical-align: 0.5;
+  background-color: transparent;
+  text-color: @fg;
+}
+
+element selected {
+  background-color: @lavender; 
+}
+
+element-text selected {
+  text-color: @mantle;
+}
+
+element-icon {
+  background-color: transparent;
+  cursor: pointer;
+}
+
