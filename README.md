@@ -27,16 +27,23 @@ The installer detects your distro, package manager, desktop environment or windo
 
 ## Quick Start
 
+
+Using curl:
+
 ```sh
-git clone https://github.com/jnixt/linux-setuper.git
-cd linux-setuper
-bash install.sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/jnixt/linux-setuper/main/install.sh)"
+```
+
+Or with wget:
+
+```sh
+bash -c "$(wget -qO- https://raw.githubusercontent.com/jnixt/linux-setuper/main/install.sh)"
 ```
 
 > Do **not** run as root. The script will ask for your sudo password once and keep it alive for the full install.
 
 <br>
-
+    
 ---
 
 ## Features

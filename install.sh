@@ -2,13 +2,17 @@
 
 # ==============================================================================
 #  linux-setuper — install.sh
-#  Entry point. Run directly from a cloned repo, or bootstrap via:
+#  Entry point. Run directly from a cloned repo, or install in one line:
 #
-#    bash <(curl  -fsSL https://raw.githubusercontent.com/jnixt/linux-setuper/main/install.sh)
-#    bash <(wget  -qO-  https://raw.githubusercontent.com/jnixt/linux-setuper/main/install.sh)
+#    bash -c "$(curl  -fsSL https://raw.githubusercontent.com/jnixt/linux-setuper/main/install.sh)"
+#    bash -c "$(wget  -qO-  https://raw.githubusercontent.com/jnixt/linux-setuper/main/install.sh)"
 #
-#  NOTE: Use process substitution (bash <(...)) — NOT curl | bash.
-#        Interactive prompts require a real terminal on stdin.
+#  Why bash -c "$(...)" and not curl | bash?
+#  $() fetches the script first, then bash runs it — stdin stays as your
+#  terminal the whole time, so interactive prompts work. curl | bash pipes
+#  curl into stdin, which breaks any read command.
+#
+#  Must be bash (not sh) — this script uses bash-specific features.
 # ==============================================================================
 
 set -euo pipefail
