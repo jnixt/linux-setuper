@@ -13,6 +13,9 @@
 #  curl into stdin, which breaks any read command.
 #
 #  Must be bash (not sh) — this script uses bash-specific features.
+#
+#  All setup steps are opt-in via the menu — nothing runs automatically
+#  after the pre-flight checks.
 # ==============================================================================
 
 set -euo pipefail
@@ -73,8 +76,8 @@ ok()        { printf "  ${GREEN}✔${RESET}  %s\n" "$*"; }
 warn()      { printf "  ${YELLOW}⚠${RESET}  %s\n" "$*"; }
 die()       { printf "  ${RED}✖${RESET}  %s\n" "$*" >&2; exit 1; }
 info()      { printf "  ${CYAN}${BOLD}%-18s${RESET}: %s\n" "$1" "$2"; }
-section()   { printf "\n${BOLD}  %s${RESET}\n${DIM}%s${RESET}\n" "$1" "────────────────────────────────────────"; }
-separator() { printf "${DIM}%s${RESET}\n" "────────────────────────────────────────"; }
+section()   { printf "\n${BOLD}  %s${RESET}\n${DIM}%s${RESET}\n" "$1" "──────────────────────────────────────────────────────────────────────────────────────────────────"; }
+separator() { printf "${DIM}%s${RESET}\n" "──────────────────────────────────────────────────────────────────────────────────────────────────"; }
 has()       { command -v "$1" >/dev/null 2>&1; }
 
 # ==============================================================================
@@ -134,101 +137,21 @@ ok "Package manager: ${SYS[PM]}"
 separator
 
 # ==============================================================================
-# 5. Install packages
-#    install-packages.sh manages its own sudo authentication.
+# 5. Setup menu — all steps are opt-in
 # ==============================================================================
 
-section "Package Installation"
-bash "$SCRIPT_DIR/scripts/install-packages.sh"
-
-# ==============================================================================
-# 6. Deploy dotfiles
-# ==============================================================================
-
-section "Deploying Dotfiles"
-
-# _deploy <label> <src-dir> <dst-dir>
-#   Copies the *contents* of <src-dir> into <dst-dir>.
-#   Creates a timestamped .bak of any pre-existing non-empty <dst-dir>.
-_deploy() {
-    local label="$1" src="$2" dst="$3"
-
-    if [[ ! -d "$src" ]]; then
-        warn "$label — source not found, skipping  ($src)"
-        return 0
-    fi
-
-    mkdir -p "$dst"
-
-    # Back up a non-empty destination before overwriting
-    if [[ -d "$dst" && -n "$(ls -A "$dst" 2>/dev/null)" ]]; then
-        local bak="${dst}.bak.$(date +%Y%m%d_%H%M%S)"
-        cp -r "$dst" "$bak"
-        log "Backed up $(basename "$dst")  →  $bak"
-    fi
-
-    if has rsync; then
-        rsync -a "$src/" "$dst/"
-    else
-        cp -r "$src/." "$dst/"
-    fi
-
-    ok "$label  →  $dst"
-}
-
-# ── configs/<name>/ → ~/.config/<name>/ ──────────────────────────────────────
-if [[ -d "$SCRIPT_DIR/configs" ]]; then
-    for _cfg in "$SCRIPT_DIR/configs"/*/; do
-        _cfg_name="$(basename "$_cfg")"
-        _deploy "$_cfg_name" "$_cfg" "$HOME/.config/$_cfg_name"
-    done
-fi
-
-# ── cursors/ → ~/.icons/ ─────────────────────────────────────────────────────
-_deploy "cursors" "$SCRIPT_DIR/cursors" "$HOME/.icons"
-
-# ── distro-specific/hypr/ → ~/.config/hypr/ (Hyprland only) ─────────────────
-if [[ "${SYS[ENV_NAME],,}" == *hyprland* ]]; then
-    _deploy "hyprland config" \
-        "$SCRIPT_DIR/distro-specific/hypr" \
-        "$HOME/.config/hypr"
-fi
-
-# ── Fastfetch helpers: make executable and expose in PATH ─────────────────────
-mkdir -p "$HOME/.local/bin"
-for _exe in count-packages get-splash; do
-    _exe_src="$HOME/.config/fastfetch/$_exe"
-    if [[ -f "$_exe_src" ]]; then
-        chmod +x "$_exe_src"
-        ln -sf "$_exe_src" "$HOME/.local/bin/$_exe"
-        ok "$_exe  →  ~/.local/bin/$_exe"
-    fi
-done
-
-# ── Ensure ~/.local/bin is in PATH (write to shell rc if missing) ─────────────
-for _rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
-    if [[ -f "$_rc" ]] && ! grep -q '\.local/bin' "$_rc"; then
-        printf '\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$_rc"
-        ok "Added ~/.local/bin to PATH  ($(basename "$_rc"))"
-    fi
-done
-
-separator
-
-# ==============================================================================
-# 7. Optional setup steps — interactive TUI menu
-# ==============================================================================
-
-section "Optional Setup Steps"
+section "Setup Menu"
 
 printf "\n"
 printf "  Select which steps to run.\n"
 printf "  Enter numbers separated by spaces, or press ${BOLD}ENTER${RESET} to skip all.\n"
 printf "\n"
-printf "  ${BOLD}1)${RESET}  show-info      Display detected system information\n"
-printf "  ${BOLD}2)${RESET}  set-wallpaper  Apply wallpaper for the current environment\n"
-printf "  ${BOLD}3)${RESET}  nerd-fonts     Install Nerd Fonts ${DIM}(pre-selected: JetBrainsMono)${RESET}\n"
-printf "  ${BOLD}4)${RESET}  setup-zsh      Configure Zsh + Oh My Zsh + plugins\n"
+printf "  ${BOLD}1)${RESET}  install-packages  Install all packages for your distro\n"
+printf "  ${BOLD}2)${RESET}  apply-configs     Deploy configs, cursors, and Hyprland files\n"
+printf "  ${BOLD}3)${RESET}  show-info         Display detected system information\n"
+printf "  ${BOLD}4)${RESET}  set-wallpaper     Apply wallpaper for the current environment\n"
+printf "  ${BOLD}5)${RESET}  nerd-fonts        Install Nerd Fonts ${DIM}(pre-selected: JetBrainsMono)${RESET}\n"
+printf "  ${BOLD}6)${RESET}  setup-zsh         Configure Zsh + Oh My Zsh + plugins\n"
 printf "\n"
 printf "${CYAN}  ❯${RESET}  "
 
@@ -242,22 +165,32 @@ if [[ -n "${_raw_input// }" ]]; then
     for _sel in "${_selections[@]}"; do
         case "$_sel" in
             1)
+                section "install-packages"
+                bash "$SCRIPT_DIR/scripts/install-packages.sh"
+                _ran_any=true
+                ;;
+            2)
+                section "apply-configs"
+                bash "$SCRIPT_DIR/scripts/apply-configs.sh"
+                _ran_any=true
+                ;;
+            3)
                 section "show-info"
                 bash "$SCRIPT_DIR/scripts/show-info.sh"
                 _ran_any=true
                 ;;
-            2)
+            4)
                 section "set-wallpaper"
                 bash "$SCRIPT_DIR/scripts/set-wallpaper.sh"
                 _ran_any=true
                 ;;
-            3)
+            5)
                 section "nerd-fonts"
                 # 42 = JetBrainsMono (1-based index in nerd-fonts.sh fonts_list)
                 bash "$SCRIPT_DIR/scripts/nerd-fonts.sh" 42
                 _ran_any=true
                 ;;
-            4)
+            6)
                 section "setup-zsh"
                 bash "$SCRIPT_DIR/scripts/setup-zsh.sh"
                 _ran_any=true
@@ -269,10 +202,10 @@ if [[ -n "${_raw_input// }" ]]; then
     done
 fi
 
-[[ "$_ran_any" == true ]] || ok "No optional steps selected — skipping"
+[[ "$_ran_any" == true ]] || ok "No steps selected — skipping"
 
 # ==============================================================================
-# 8. Done  (_cleanup fires automatically via the EXIT trap)
+# 6. Done  (_cleanup fires automatically via the EXIT trap)
 # ==============================================================================
 
 separator
