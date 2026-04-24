@@ -18,7 +18,7 @@ if [ -f /etc/os-release ]; then
     # Source into a subshell and cherry-pick only what we need, so the dozens
     # of variables defined in os-release don't leak into the caller's env.
     _os_name=$(. /etc/os-release && echo "$NAME")
-    _os_id_like=$(. /etc/os-release && echo "$ID_LIKE")
+    _os_id_like=$(. /etc/os-release && echo "${ID_LIKE:-}")
 
     SYS[DISTRO]="$_os_name"
 
