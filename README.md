@@ -113,8 +113,9 @@ linux-setuper/
 │       ├── hyprland.conf
 │       └── hyprpaper.conf
 │
-├── themes/                     # Color schemes and GTK/Qt themes
-└── icons/                      # Icon packs
+├── packages/                     # Extra binaries that can't be installed by Package Managr
+└── cursors/                      # Cursor pack
+│   └──  UOS-Dark
 ```
 
 <br>
