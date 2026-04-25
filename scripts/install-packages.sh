@@ -19,7 +19,9 @@ set -euo pipefail
 # 0. Bootstrap
 # ==============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+PACKAGES_DIR="$(cd "$SCRIPT_DIR/.." && pwd)/packages"
+mkdir -p "$PACKAGES_DIR"
 
 # Load SYS[] if not already populated (e.g. when run standalone)
 if [[ ! -v SYS ]]; then
@@ -41,6 +43,27 @@ warn()      { printf "  ${YELLOW}⚠${RESET}  %s\n" "$*"; }
 die()       { printf "  ${RED}✖${RESET}  %s\n" "$*" >&2; exit 1; }
 section()   { printf "\n${BOLD}  %s${RESET}\n${DIM}%s${RESET}\n" "$*" "────────────────────────────────────────"; }
 has()       { command -v "$1" >/dev/null 2>&1; }
+
+# _pkg_cache <filename> <url>
+#   Downloads <url> to packages/<filename> if not already cached.
+#   Prints the full path to the file so callers can use it directly.
+_pkg_cache() {
+    local filename="$1" url="$2"
+    local dest="$PACKAGES_DIR/$filename"
+    if [[ -f "$dest" ]]; then
+        log "Using cached: $filename"
+    else
+        log "Downloading $filename…"
+        if has curl; then
+            curl -fsSL "$url" -o "$dest"
+        elif has wget; then
+            wget -qO "$dest" "$url"
+        else
+            die "Neither curl nor wget found — cannot download $filename"
+        fi
+    fi
+    echo "$dest"
+}
 
 # ==============================================================================
 # 1. Sudo: authenticate once, keep alive for the entire script
@@ -144,11 +167,11 @@ case "$PM" in
     apt)
         PKGS_NATIVE=(
             openssh-client      # ssh
-            firefox             # browser (firefox-esr on older Debian)
-            7zip                # archive; fallback p7zip-full handled below
-            fastfetch           # Ubuntu 24.04+; older = GitHub binary fallback
-            yazi                # Ubuntu 24.04+; older = cargo fallback
             torbrowser-launcher # tor browser
+            # firefox    → tried individually below (firefox-esr fallback)
+            # 7zip       → tried individually below (p7zip-full fallback)
+            # fastfetch  → not reliable in repos; packages/ fallback in section 8b
+            # yazi       → not reliable in repos; packages/ fallback in section 8a
         )
         ;;
     dnf)
@@ -227,6 +250,14 @@ section "Installing packages via $PM"
 log "Installing: ${PKGS_ALL[*]}"
 _install "${PKGS_ALL[@]}"
 ok "Core packages installed"
+
+# apt extras that need individual fallback handling
+if [[ "$PM" == "apt" ]]; then
+    _try_install firefox || _try_install firefox-esr \
+        || warn "Could not install firefox — install it manually"
+    _try_install 7zip   || _try_install p7zip-full \
+        || warn "Could not install 7zip — install it manually"
+fi
 
 # ==============================================================================
 # 5. Arch-specific: yay + AUR packages
@@ -316,23 +347,22 @@ section "Yazi (fallback check)"
 
 if has yazi; then
     ok "yazi already installed"
+elif _try_install yazi 2>/dev/null; then
+    ok "yazi installed from repos"
+elif has cargo; then
+    log "yazi not in repos — installing via cargo…"
+    cargo install --locked yazi-fm yazi-cli
+    ok "yazi installed via cargo"
 else
-    if has cargo; then
-        log "yazi not in repos — installing via cargo…"
-        cargo install --locked yazi-fm yazi-cli
-        ok "yazi installed via cargo"
-    else
-        # Last resort: grab the latest binary from GitHub releases
-        log "yazi not in repos and cargo not found — fetching binary release…"
-        _yazi_tmp=$(mktemp -d)
-        _yazi_url="https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-gnu.zip"
-        curl -fsSL "$_yazi_url" -o "$_yazi_tmp/yazi.zip"
-        unzip -q "$_yazi_tmp/yazi.zip" -d "$_yazi_tmp"
-        $SUDO install -Dm755 "$_yazi_tmp"/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/yazi
-        $SUDO install -Dm755 "$_yazi_tmp"/yazi-x86_64-unknown-linux-gnu/ya   /usr/local/bin/ya
-        rm -rf "$_yazi_tmp"
-        ok "yazi installed from GitHub release"
-    fi
+    log "yazi not in repos — fetching binary from GitHub releases…"
+    _yazi_zip="$(_pkg_cache "yazi.zip" \
+        "https://github.com/sxyazi/yazi/releases/latest/download/yazi-x86_64-unknown-linux-gnu.zip")"
+    _yazi_tmp=$(mktemp -d)
+    unzip -q "$_yazi_zip" -d "$_yazi_tmp"
+    $SUDO install -Dm755 "$_yazi_tmp"/yazi-x86_64-unknown-linux-gnu/yazi /usr/local/bin/yazi
+    $SUDO install -Dm755 "$_yazi_tmp"/yazi-x86_64-unknown-linux-gnu/ya   /usr/local/bin/ya
+    rm -rf "$_yazi_tmp"
+    ok "yazi installed from GitHub release"
 fi
 
 # --- 8b. fastfetch (older apt distros that don't package it) -----------------
@@ -340,14 +370,14 @@ section "Fastfetch (fallback check)"
 
 if has fastfetch; then
     ok "fastfetch already installed"
+elif _try_install fastfetch 2>/dev/null; then
+    ok "fastfetch installed from repos"
 elif [[ "$PM" == "apt" ]]; then
     log "fastfetch not in repos — fetching .deb from GitHub releases…"
-    _ff_tmp=$(mktemp -d)
-    _ff_url="https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-amd64.deb"
-    curl -fsSL "$_ff_url" -o "$_ff_tmp/fastfetch.deb"
-    $SUDO dpkg -i "$_ff_tmp/fastfetch.deb"
-    rm -rf "$_ff_tmp"
-    ok "fastfetch installed from GitHub release"
+    _ff_deb="$(_pkg_cache "fastfetch.deb" \
+        "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-amd64.deb")"
+    $SUDO dpkg -i "$_ff_deb"
+    ok "fastfetch installed via dpkg (packages/fastfetch.deb)"
 fi
 
 # --- 8c. swww on non-Arch Wayland setups (binary release) --------------------
@@ -359,14 +389,14 @@ if [[ -n "${WAYLAND_DISPLAY:-}" && "$PM" != "pacman" ]]; then
         ok "swww already installed — skipping"
     else
         log "Installing swww from GitHub releases…"
+        _swww_tgz="$(_pkg_cache "swww.tar.gz" \
+            "https://github.com/LGFae/swww/releases/latest/download/swww-x86_64-unknown-linux-musl.tar.gz")"
         _swww_tmp=$(mktemp -d)
-        _swww_url="https://github.com/LGFae/swww/releases/latest/download/swww-x86_64-unknown-linux-musl.tar.gz"
-        curl -fsSL "$_swww_url" -o "$_swww_tmp/swww.tar.gz"
-        tar -xzf "$_swww_tmp/swww.tar.gz" -C "$_swww_tmp"
+        tar -xzf "$_swww_tgz" -C "$_swww_tmp"
         $SUDO install -Dm755 "$_swww_tmp/swww"        /usr/local/bin/swww
         $SUDO install -Dm755 "$_swww_tmp/swww-daemon" /usr/local/bin/swww-daemon
         rm -rf "$_swww_tmp"
-        ok "swww installed from GitHub release"
+        ok "swww installed (packages/swww.tar.gz)"
     fi
 fi
 
@@ -413,12 +443,10 @@ if [[ "${SYS[ENV_NAME],,}" == *hyprland* ]]; then
         ok "cliphist already installed"
     elif ! _try_install cliphist; then
         log "cliphist not in repos — fetching binary from GitHub…"
-        _ch_tmp=$(mktemp -d)
-        _ch_url="https://github.com/sentriz/cliphist/releases/latest/download/v0.5.0-linux-amd64"
-        curl -fsSL "$_ch_url" -o "$_ch_tmp/cliphist"
-        $SUDO install -Dm755 "$_ch_tmp/cliphist" /usr/local/bin/cliphist
-        rm -rf "$_ch_tmp"
-        ok "cliphist installed from GitHub release"
+        _ch_bin="$(_pkg_cache "cliphist" \
+            "https://github.com/sentriz/cliphist/releases/latest/download/v0.5.0-linux-amd64")"
+        $SUDO install -Dm755 "$_ch_bin" /usr/local/bin/cliphist
+        ok "cliphist installed (packages/cliphist)"
     fi
 
     # --- 9c. hyprshot ----------------------------------------------------------

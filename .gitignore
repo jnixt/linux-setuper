@@ -1,0 +1,3 @@
+# Downloaded package cache — keep the directory, ignore its contents
+packages/*
+!packages/.gitkeep

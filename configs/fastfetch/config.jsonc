@@ -8,7 +8,7 @@
       "2": "magenta",
     },
     "width": 24,
-    "height": 32,
+    "height": 15,
     "padding": {
       "top": 2,
       "left": 2,
@@ -122,6 +122,5 @@
       "paddingLeft": 15,
       "symbol": "circle",
     },
-    "break",
   ],
 }

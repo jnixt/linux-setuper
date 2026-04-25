@@ -26,7 +26,7 @@ set -euo pipefail
 #    script. Detect that, download the repo, then re-exec from inside it.
 # ==============================================================================
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 
 if [[ ! -f "$SCRIPT_DIR/scripts/detector.sh" ]]; then
 
